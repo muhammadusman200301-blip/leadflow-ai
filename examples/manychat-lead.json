@@ -1,0 +1,11 @@
+{
+  "subscriber_id": "123",
+  "first_name": "Ayesha",
+  "last_name": "Khan",
+  "email": "ayesha@example.com",
+  "phone": "0300-1234567",
+  "channel": "instagram",
+  "last_input": "Need a quote this week, budget around 200k PKR",
+  "custom_fields": { "service": "website" },
+  "ad_id": "ad_42"
+}
