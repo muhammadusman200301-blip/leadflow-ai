@@ -8,6 +8,7 @@ import { LeadStore } from "./lib/store.ts";
 import { fromManyChat, fromWebForm } from "./lib/normalize.ts";
 import { verifyTwilioSignature } from "./lib/twilio.ts";
 import { processLead, type Deps } from "./pipeline.ts";
+import { createMcpHandler } from "./mcp.ts";
 
 const MAX_BODY = 100_000;
 
@@ -36,12 +37,26 @@ function secretOk(expected: string, given: string | string[] | undefined): boole
 
 export function buildServer(deps: Deps) {
   const c: Config = deps.config;
+  const mcp = createMcpHandler(deps);
 
   return createServer(async (req, res) => {
     try {
       const url = new URL(req.url ?? "/", "http://localhost");
 
       if (req.method === "GET" && url.pathname === "/health") return send(res, 200, { ok: true });
+
+      // MCP over HTTP (Streamable HTTP, JSON responses) for remote clients such as ChatGPT connectors.
+      if (url.pathname === "/mcp") {
+        if (req.method !== "POST") return send(res, 405, { error: "use POST" });
+        const auth = String(req.headers.authorization ?? "").replace(/^Bearer /, "");
+        if (!secretOk(c.mcpToken, auth)) return send(res, 401, { error: "bad token" });
+        const out = await mcp(JSON.parse(await readBody(req)));
+        if (!out) {
+          res.writeHead(202).end();
+          return;
+        }
+        return send(res, 200, out);
+      }
 
       if (req.method === "POST" && url.pathname === "/webhooks/manychat") {
         if (!secretOk(c.manychatSecret, req.headers["x-webhook-secret"])) return send(res, 401, { error: "bad secret" });
