@@ -4,7 +4,8 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname } from "node:path";
 
-type Record_ = { firstSeen: string; result?: unknown };
+export type StoredLead = { firstSeen: string; lead?: unknown; result?: unknown };
+type Record_ = StoredLead;
 
 export class LeadStore {
   private seen = new Map<string, Record_>();
@@ -26,15 +27,23 @@ export class LeadStore {
     return true;
   }
 
-  saveResult(key: string, result: unknown): void {
+  saveResult(key: string, result: unknown, lead?: unknown): void {
     const rec = this.seen.get(key) ?? { firstSeen: new Date().toISOString() };
     rec.result = result;
+    if (lead !== undefined) rec.lead = lead;
     this.seen.set(key, rec);
     this.flush();
   }
 
   get(key: string): Record_ | undefined {
     return this.seen.get(key);
+  }
+
+  /** Every stored lead, newest first. Used by the MCP server and reporting. */
+  all(): Array<{ id: string } & Record_> {
+    return [...this.seen.entries()]
+      .map(([id, rec]) => ({ id, ...rec }))
+      .sort((a, b) => b.firstSeen.localeCompare(a.firstSeen));
   }
 
   private flush(): void {
