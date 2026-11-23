@@ -17,6 +17,7 @@ export type Config = {
   metaPixelId: string;
   metaAccessToken: string;
   metaTestEventCode: string;
+  mcpToken: string;
   dryRun: boolean;
 };
 
@@ -38,6 +39,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     metaPixelId: env.META_PIXEL_ID ?? "",
     metaAccessToken: env.META_ACCESS_TOKEN ?? "",
     metaTestEventCode: env.META_TEST_EVENT_CODE ?? "",
+    mcpToken: env.MCP_TOKEN ?? "",
     dryRun: (env.DRY_RUN ?? "true").toLowerCase() === "true",
   };
 }
