@@ -4,6 +4,8 @@ From a Meta ad enquiry to a qualified lead in HubSpot, automatically.
 
 A lead comes in from **ManyChat** (Instagram / Facebook DMs) or a **website form**. LeadFlow AI qualifies it with **OpenAI**, creates or updates the **HubSpot** contact and deal, sends a **Twilio WhatsApp** follow-up, and reports qualified leads back to **Meta Conversions API** so ads optimise for leads that actually convert.
 
+It also ships an **MCP server**, so Claude, ChatGPT, Cursor or any MCP client can list leads, check stats and submit new leads in plain language.
+
 Zero dependencies: plain Node.js 22 + TypeScript, `node:http`, `fetch` and `node:test`.
 
 ```mermaid
@@ -38,7 +40,7 @@ flowchart LR
 ```bash
 cp .env.example .env      # DRY_RUN=true logs every outbound call instead of sending it
 npm start                 # http://localhost:3000
-npm test                  # 12 tests, all external APIs mocked
+npm test                  # 20 tests, all external APIs mocked
 ```
 
 Try a lead (dry run):
@@ -49,6 +51,38 @@ curl -X POST localhost:3000/webhooks/form \
   -d @examples/web-form-lead.json
 ```
 
+## Use it from Claude or ChatGPT (MCP)
+
+LeadFlow AI speaks the [Model Context Protocol](https://modelcontextprotocol.io), so an AI assistant can work with your leads directly.
+
+| Tool | What it does | Changes anything? |
+|---|---|---|
+| `list_leads` | Recent leads, filter by status, source or "needs a person" | No |
+| `get_lead` | Full details: contact, message, AI score, CRM ids, errors | No |
+| `lead_stats` | Counts by status and source, handoffs, failed integrations | No |
+| `qualify_message` | Score a message without saving or sending anything | No |
+| `submit_lead` | Run a lead through the full pipeline (respects `DRY_RUN`) | Yes |
+
+**Claude Desktop, Claude Code or Cursor (local, stdio).** Add this to the client's MCP config:
+
+```json
+{
+  "mcpServers": {
+    "leadflow": {
+      "command": "node",
+      "args": ["/path/to/leadflow-ai/src/mcp.ts"],
+      "env": { "DRY_RUN": "true", "LEADFLOW_STORE": "/path/to/leadflow-ai/data/leads.json" }
+    }
+  }
+}
+```
+
+Then ask things like *"How many qualified leads came in from Instagram?"* or *"Which leads need a person to call them?"*
+
+**ChatGPT and other remote clients (HTTP).** The main server also exposes `POST /mcp`. Set `MCP_TOKEN`, deploy it with a public HTTPS URL, and add that URL as a connector with the token as a Bearer header.
+
+Tool errors (for example an unknown lead id) come back as readable results the model can act on, not as crashes, and only `submit_lead` is marked as able to change anything.
+
 ## Endpoints
 
 | Method | Path | Used by |
@@ -57,6 +91,7 @@ curl -X POST localhost:3000/webhooks/form \
 | POST | `/webhooks/manychat` | ManyChat "External Request" action |
 | POST | `/webhooks/form` | Website enquiry form |
 | POST | `/webhooks/twilio/status` | Twilio message status callback |
+| POST | `/mcp` | MCP clients over HTTP (Bearer `MCP_TOKEN`) |
 
 ## Connect the real services
 
@@ -70,7 +105,8 @@ curl -X POST localhost:3000/webhooks/form \
 
 ```
 src/
-  server.ts          HTTP routes and webhook security
+  server.ts          HTTP routes, webhook security and POST /mcp
+  mcp.ts             MCP server (stdio and HTTP) with 5 lead tools
   pipeline.ts        The flow for one lead
   config.ts          Environment settings
   lib/
@@ -81,11 +117,12 @@ src/
     metaCapi.ts      Hashed Conversions API events
     http.ts          fetch with timeout and retries
     store.ts         Idempotency and audit log (JSON file; swap for Postgres/Redis)
-test/                node:test suite with mocked APIs
+test/                node:test suites (pipeline + MCP) with mocked APIs
 ```
 
 ## Roadmap
 
+- [x] MCP server so Claude and ChatGPT can read and submit leads
 - [ ] Google Ads offline conversion upload for qualified leads (`gclid`)
 - [ ] AI voice agent on Twilio Voice + ElevenLabs, transcript saved to HubSpot
 - [ ] Postgres store and a small dashboard of leads by source and status
