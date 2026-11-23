@@ -77,6 +77,6 @@ export async function processLead(lead: Lead, deps: Deps): Promise<PipelineResul
     }
   }
 
-  store.saveResult(lead.externalId, result);
+  store.saveResult(lead.externalId, result, lead);
   return result;
 }
