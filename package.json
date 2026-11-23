@@ -14,16 +14,3 @@
   },
   "license": "MIT"
 }
-{
-  "name": "leadflow-ai",
-  "version": "0.1.0",
-  "description": "Ad enquiry to qualified lead: ManyChat / web form -> AI qualification -> HubSpot -> Twilio WhatsApp -> Meta CAPI",
-  "type": "module",
-  "engines": { "node": ">=22.18" },
-  "scripts": {
-    "start": "node src/server.ts",
-    "dev": "node --watch src/server.ts",
-    "test": "node --test test/*.test.ts"
-  },
-  "license": "MIT"
-}
